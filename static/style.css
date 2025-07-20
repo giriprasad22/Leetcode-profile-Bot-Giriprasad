@@ -14,6 +14,8 @@
     --medium-color: #fdcb6e;
     --hard-color: #e84393;
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    --gemini-color: #4285f4;
+    --gemini-active: #34a853;
 }
 
 * {
@@ -115,6 +117,12 @@ body {
     border-bottom-right-radius: 5px;
 }
 
+.system .message-content {
+    background: #333 !important;
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
 .bot-message {
     align-self: flex-start;
 }
@@ -153,7 +161,7 @@ body {
 
 .input-area form {
     display: flex;
-    gap: 10px;
+    gap: 5px;
 }
 
 .input-area input {
@@ -196,6 +204,19 @@ body {
 
 .send-button:active {
     transform: translateY(0);
+}
+
+.gemini-btn {
+    background: var(--gemini-color);
+    margin-left: 0;
+}
+
+.gemini-btn.active {
+    background: var(--gemini-active);
+}
+
+.gemini-btn:hover {
+    background: #3367d6;
 }
 
 /* Profile Data Styles */
