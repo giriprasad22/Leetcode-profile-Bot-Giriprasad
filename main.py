@@ -1,10 +1,21 @@
 from flask import Flask, render_template, request, jsonify
 import requests
 import time
+from dotenv import load_dotenv
+import os
+import google.generativeai as genai
 
+# Load environment variables
+load_dotenv()
+
+# Initialize Flask app
 app = Flask(__name__)
 
-# Enhanced headers to mimic browser behavior
+# Configure Gemini
+genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+
+# Headers for LeetCode API
 REQUEST_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Accept": "*/*",
@@ -71,9 +82,36 @@ def get_leetcode_data(username):
 
 @app.route("/", methods=["GET", "POST"])
 def home():
-    current_time = time.strftime("%I:%M %p")  # Get current time for messages
+    current_time = time.strftime("%I:%M %p")
     
     if request.method == "POST":
+        # Check if it's a Gemini request
+        if request.form.get('gemini_mode') == 'true':
+            question = request.form.get("username", "").strip()
+            if not question:
+                return render_template(
+                    "index.html",
+                    error="Question cannot be empty",
+                    current_time=current_time
+                )
+            
+            try:
+                response = gemini_model.generate_content(
+                    f"Answer this coding question concisely: {question}"
+                )
+                return render_template(
+                    "index.html",
+                    gemini_response=response.text,
+                    current_time=current_time
+                )
+            except Exception as e:
+                return render_template(
+                    "index.html",
+                    error=f"Gemini error: {str(e)}",
+                    current_time=current_time
+                )
+        
+        # Original LeetCode lookup
         username = request.form.get("username", "").strip()
         if not username:
             return render_template(
@@ -82,12 +120,8 @@ def home():
                 current_time=current_time
             )
         
-        print(f"\nFetching data for: {username}")  # Debug output
-        
         data = get_leetcode_data(username)
-        print("API Response:", data)  # Debug output
         
-        # Check if user exists and data is valid
         if data.get("data") and data["data"].get("matchedUser"):
             user_data = data["data"]["matchedUser"]
             
@@ -123,13 +157,18 @@ def home():
             if user_data.get("profile") and user_data["profile"].get("ranking"):
                 ranking = user_data["profile"]["ranking"]
             
+            # Calculate safe percentage for progress bars
+            def calculate_percentage(count, total):
+                return int((count / total) * 100) if total > 0 else 0
+            
             stats = {
                 "username": username,
                 "rank": ranking,
                 "problems": problems,
                 "languages": languages,
                 "badges": badges,
-                "total_solved": total_solved
+                "total_solved": total_solved,
+                "calculate_percentage": calculate_percentage  # Add the function to template context
             }
             
             return render_template(
@@ -149,7 +188,6 @@ def home():
             current_time=current_time
         )
     
-    # Initial GET request
     return render_template("index.html", current_time=current_time)
 
 if __name__ == "__main__":
